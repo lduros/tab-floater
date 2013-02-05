@@ -30,4 +30,67 @@ exports["test TabFloater"] = function (assert, done) {
   });
 };
 
+exports["test TabFloater Emit"] = function(assert, done) {
+  const { TabFloater } = require('tab-floater');
+
+  let floater = TabFloater({
+    contentURL: "about:buildconfig",
+    contentScript: "self.port.emit('loaded');" +
+                   "self.port.on('addon-to-content', " +
+                   "             function() self.port.emit('received'));"
+  });
+  floater.port.on("loaded", function () {
+    assert.pass("The panel was loaded and sent a first event.");
+    floater.port.emit("addon-to-content");
+  });
+  floater.port.on("received", function () {
+    assert.pass("The panel posted a message and received a response.");
+    floater.destroy();
+    done();
+  });
+};
+
+exports["test TabFloater Emit Early"] = function(assert, done) {
+  const { TabFloater } = require('tab-floater');
+
+  let tabFloater = TabFloater({
+    contentURL: "about:buildconfig",
+    contentScript: "self.port.on('addon-to-content', " +
+                   "             function() self.port.emit('received'));",
+  });
+  tabFloater.port.on("received", function () {
+    assert.pass("The tabFloater posted a message early and received a response.");
+    tabFloater.destroy();
+    done();
+  });
+  tabFloater.port.emit("addon-to-content");
+};
+
+exports["test Show Hide TabFloater"] = function(assert, done) {
+  const { TabFloater } = require('tab-floater');
+
+  let tabFloater = TabFloater({
+    contentScript: "self.postMessage('')",
+    contentScriptWhen: "end",
+    contentURL: "data:text/html;charset=utf-8,",
+    onMessage: function (message) {
+      tabFloater.show();
+    },
+    onShow: function () {
+      assert.pass("The tabFloater was shown.");
+      assert.equal(this, tabFloater, "The 'this' object is the tabFloater.");
+//      assert.equal(this.isShowing, true, "tabFloater.isShowing == true.");
+      tabFloater.hide();
+    },
+    onHide: function () {
+      assert.pass("The tabFloater was hidden.");
+      assert.equal(this, tabFloater, "The 'this' object is the tabFloater.");
+//      assert.equal(this.isShowing, false, "tabFloater.isShowing == false.");
+      tabFloater.destroy();
+      done();
+    }
+  });
+};
+
+
 require("test").run(exports);
