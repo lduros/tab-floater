@@ -123,6 +123,60 @@ exports["test Document Reload"] = function(assert, done) {
   });
 };
 
+exports["test Resize TabFloater"] = function(assert, done) {
+  const { TabFloater } = require('tab-floater');
+
+  // These tests fail on Linux if the browser window in which the tabfloater
+  // is displayed is not active.  And depending on what other tests have run
+  // before this one, it might not be (the untitled window in which the test
+  // runner executes is often active).  So we make sure the browser window
+  // is focused by focusing it before running the tests.  Then, to be the best
+  // possible test citizen, we refocus whatever window was focused before we
+  // started running these tests.
+
+  let activeWindow = Cc["@mozilla.org/embedcomp/window-watcher;1"].
+                      getService(Ci.nsIWindowWatcher).
+                      activeWindow;
+  let browserWindow = Cc["@mozilla.org/appshell/window-mediator;1"].
+                      getService(Ci.nsIWindowMediator).
+                      getMostRecentWindow("navigator:browser");
+
+
+  function onFocus() {
+    browserWindow.removeEventListener("focus", onFocus, true);
+
+    let tabFloater = TabFloater({
+      contentScript: "self.postMessage('')",
+      contentScriptWhen: "end",
+      contentURL: "data:text/html;charset=utf-8,",
+      height: 10,
+      width: 10,
+      onMessage: function (message) {
+        tabFloater.show();
+      },
+      onShow: function () {
+        tabFloater.resize(100,100);
+        tabFloater.hide();
+      },
+      onHide: function () {
+        console.log("TabFloater width", tabFloater.width, "TabFloater height", tabFloater.height);
+        assert.ok((tabFloater.width == 100) && (tabFloater.height == 100),
+          "The tabFloater was resized.");
+        if (activeWindow)
+          activeWindow.focus();
+        done();
+      }
+    });
+  }
+
+  if (browserWindow === activeWindow) {
+    onFocus();
+  }
+  else {
+    browserWindow.addEventListener("focus", onFocus, true);
+    browserWindow.focus();
+  }
+};
 
 
 require("test").run(exports);
