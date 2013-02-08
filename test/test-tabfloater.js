@@ -68,26 +68,24 @@ exports["test TabFloater Emit Early"] = function(assert, done) {
 
 exports["test Show Hide TabFloater"] = function(assert, done) {
   const { TabFloater } = require('tab-floater');
-  let tabFloater;
-  tabFloater = TabFloater({
+
+  let tabFloater = TabFloater({
     contentScript: "self.postMessage('')",
     contentScriptWhen: "end",
     contentURL: "data:text/html;charset=utf-8,",
     onMessage: function (message) {
-      assert.equal(this, tabFloater, "The 'this' object is the tabFloater.");
+      assert.equal(this.toString(), '[object TabFloater]', "The 'this' object is the tabFloater.");
       tabFloater.show();
       console.log("running");
     },
     onShow: function () {
       assert.pass("The tabFloater was shown.");
-      
-      assert.equal(this, tabFloater, "The 'this' object is the tabFloater.");
-
+      assert.equal(this.toString(), '[object TabFloater]', "The 'this' object is the tabFloater.");
       tabFloater.hide();
     },
     onHide: function () {
       assert.pass("The tabFloater was hidden.");
-      assert.equal(this, tabFloater, "The 'this' object is the tabFloater.");
+      assert.equal(this.toString(), '[object TabFloater]', "The 'this' object is the tabFloater.");
       tabFloater.destroy();
       done();
     }
