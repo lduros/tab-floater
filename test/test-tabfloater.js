@@ -8,6 +8,7 @@ const self = require('self');
 const timer = require('timer');
 const { Loader } = require('sdk/test/loader');
 
+
 exports["test TabFloater"] = function (assert, done) {
   const { TabFloater } = require('tab-floater');
   let floater = TabFloater({
@@ -66,6 +67,7 @@ exports["test TabFloater Emit Early"] = function(assert, done) {
   tabFloater.port.emit("addon-to-content");
 };
 
+
 exports["test Show Hide TabFloater"] = function(assert, done) {
   const { TabFloater } = require('tab-floater');
 
@@ -74,24 +76,53 @@ exports["test Show Hide TabFloater"] = function(assert, done) {
     contentScriptWhen: "end",
     contentURL: "data:text/html;charset=utf-8,",
     onMessage: function (message) {
-      assert.equal(this.toString(), '[object TabFloater]', "The 'this' object is the tabFloater.");
-      tabFloater.show();
+      assert.equal(this.toString(), tabFloater, "The 'this' object is the tabFloater.");
       console.log("running");
+      tabFloater.show();
     },
     onShow: function () {
       assert.pass("The tabFloater was shown.");
-      assert.equal(this.toString(), '[object TabFloater]', "The 'this' object is the tabFloater.");
+      assert.equal(this.toString(), tabFloater, "The 'this' object is the tabFloater.");
       tabFloater.hide();
     },
     onHide: function () {
       assert.pass("The tabFloater was hidden.");
-      assert.equal(this.toString(), '[object TabFloater]', "The 'this' object is the tabFloater.");
+      assert.equal(this.toString(), tabFloater, "The 'this' object is the tabFloater.");
       tabFloater.destroy();
       done();
     }
   });
-
 };
+
+
+exports["test Document Reload"] = function(assert, done) {
+
+  const { TabFloater } = require('tab-floater');
+  let content =
+    "<script>" +
+    "setTimeout(function () {" +
+    "  window.location = 'about:blank';" +
+    "}, 250);" +
+    "</script>";
+  let messageCount = 0;
+  let tabFloater = TabFloater({
+    contentURL: "data:text/html;charset=utf-8," + encodeURIComponent(content),
+    contentScript: "self.postMessage(window.location.href)",
+    onMessage: function (message) {
+      messageCount++;
+      if (messageCount == 1) {
+        assert.ok(/data:text\/html/.test(message), "First document had a content script");
+      }
+      else if (messageCount == 2) {
+        assert.equal(message, "about:blank", "Second document too");
+        tabFloater.destroy();
+        done();
+
+      }
+    }
+  });
+};
+
 
 
 require("test").run(exports);
